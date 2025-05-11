@@ -162,55 +162,65 @@ def make_weighted_step() -> None:
     grid[current_y, current_x] = 1
     path.append((current_x, current_y))
 
-def make_detour_step() -> None:
-    """Make one step by adding a detour to the existing path."""
+def make_detour_step() -> bool:
+    """Try to add a detour to the existing path using shuffled indices.
+
+    Returns:
+        True if a detour was added, False if no more detours possible
+    """
     global path, grid, is_complete
 
     # Check if there are no more valid edge positions to create detours
     if len(path) <= 1:
         is_complete = True
-        return
+        return False
 
-    # Pick a random index along the path (not the last one)
-    random_index = random.randint(0, len(path) - 2)
-    p_chosen = path[random_index]
-    p_next = path[random_index + 1]
+    # Create a shuffled list of all edge indices
+    shuffled_indices = list(range(len(path) - 1))
+    random.shuffle(shuffled_indices)
 
-    # Determine the direction from p_chosen to p_next
-    direction = (p_next[0] - p_chosen[0], p_next[1] - p_chosen[1])
+    # Try each index in the shuffled list
+    for index in shuffled_indices:
+        # Get the edge
+        p_chosen = path[index]
+        p_next = path[index + 1]
 
-    # Determine valid detour directions based on path direction
-    detour_directions = []
-    if direction[1] == 0:  # horizontal movement
-        detour_directions = [(0, -1), (0, 1)]  # up and down
-    elif direction[0] == 0:  # vertical movement
-        detour_directions = [(-1, 0), (1, 0)]  # left and right
+        # Determine the direction from p_chosen to p_next
+        direction = (p_next[0] - p_chosen[0], p_next[1] - p_chosen[1])
 
-    # Try each detour direction
-    for detour_dir in detour_directions:
-        # Calculate the two new points for the detour
-        first_detour_point = (p_chosen[0] + detour_dir[0], p_chosen[1] + detour_dir[1])
-        second_detour_point = (p_next[0] + detour_dir[0], p_next[1] + detour_dir[1])
+        # Determine valid detour directions based on path direction
+        detour_directions = []
+        if direction[1] == 0:  # horizontal movement
+            detour_directions = [(0, -1), (0, 1)]  # up and down
+        elif direction[0] == 0:  # vertical movement
+            detour_directions = [(-1, 0), (1, 0)]  # left and right
 
-        # Check if both points are within bounds
-        if (0 <= first_detour_point[0] < GRID_SIZE and
-            0 <= first_detour_point[1] < GRID_SIZE and
-            0 <= second_detour_point[0] < GRID_SIZE and
-            0 <= second_detour_point[1] < GRID_SIZE):
+        # Try each detour direction
+        for detour_dir in detour_directions:
+            # Calculate the two new points for the detour
+            first_detour_point = (p_chosen[0] + detour_dir[0], p_chosen[1] + detour_dir[1])
+            second_detour_point = (p_next[0] + detour_dir[0], p_next[1] + detour_dir[1])
 
-            # Check if both spots are empty
-            is_first_empty = grid[first_detour_point[1], first_detour_point[0]] == 0
-            is_second_empty = grid[second_detour_point[1], second_detour_point[0]] == 0
+            # Check if both points are within bounds
+            if (0 <= first_detour_point[0] < GRID_SIZE and
+                0 <= first_detour_point[1] < GRID_SIZE and
+                0 <= second_detour_point[0] < GRID_SIZE and
+                0 <= second_detour_point[1] < GRID_SIZE):
 
-            if is_first_empty and is_second_empty:
-                # Insert the detour
-                path[random_index + 1:random_index + 1] = [first_detour_point, second_detour_point]
-                grid[first_detour_point[1], first_detour_point[0]] = 1
-                grid[second_detour_point[1], second_detour_point[0]] = 1
-                return  # Only make one detour per step
+                # Check if both spots are empty
+                is_first_empty = grid[first_detour_point[1], first_detour_point[0]] == 0
+                is_second_empty = grid[second_detour_point[1], second_detour_point[0]] == 0
 
-    # If we get here, no valid detour was found at this position
-    # This step doesn't mark completion, as other positions might still have valid detours
+                if is_first_empty and is_second_empty:
+                    # Insert the detour
+                    path[index + 1:index + 1] = [first_detour_point, second_detour_point]
+                    grid[first_detour_point[1], first_detour_point[0]] = 1
+                    grid[second_detour_point[1], second_detour_point[0]] = 1
+                    return True  # Detour was added successfully
+
+    # We've tried all indices and found no valid detour
+    is_complete = True
+    return False
 
 # Rendering functions
 def setup_render(grid_dimensions: int) -> tuple[plt.Figure, plt.Axes, plt.Line2D]:
@@ -229,8 +239,6 @@ def setup_render(grid_dimensions: int) -> tuple[plt.Figure, plt.Axes, plt.Line2D
     # Remove tick marks
     ax.set_xticks([])
     ax.set_yticks([])
-
-    ax.set_title('Random Walk Animation')
 
     # Initialize line
     line, = ax.plot([], [], 'b-', alpha=0.7, linewidth=2)
@@ -279,7 +287,7 @@ def render_detour_frame(frame: int, ax: plt.Axes, line: plt.Line2D) -> tuple[plt
     """Render one frame of the detour algorithm animation."""
     global is_complete
 
-    # Make one detour step
+    # Try to make a detour every frame
     if not is_complete:
         make_detour_step()
 
@@ -287,63 +295,42 @@ def render_detour_frame(frame: int, ax: plt.Axes, line: plt.Line2D) -> tuple[plt
     if path:
         x_coords, y_coords = zip(*path)
         line.set_data(x_coords, y_coords)
-        ax.set_title(f'Detour Path Animation (Length: {len(path)})')
-
-    # Check if we can't expand anymore
-    if not is_complete:
-        # Try to find any valid detour position
-        found_valid = False
-        for i in range(len(path) - 1):
-            p_chosen = path[i]
-            p_next = path[i + 1]
-            direction = (p_next[0] - p_chosen[0], p_next[1] - p_chosen[1])
-
-            detour_directions = []
-            if direction[1] == 0:  # horizontal
-                detour_directions = [(0, -1), (0, 1)]
-            elif direction[0] == 0:  # vertical
-                detour_directions = [(-1, 0), (1, 0)]
-
-            for detour_dir in detour_directions:
-                first_point = (p_chosen[0] + detour_dir[0], p_chosen[1] + detour_dir[1])
-                second_point = (p_next[0] + detour_dir[0], p_next[1] + detour_dir[1])
-
-                if (0 <= first_point[0] < GRID_SIZE and
-                    0 <= first_point[1] < GRID_SIZE and
-                    0 <= second_point[0] < GRID_SIZE and
-                    0 <= second_point[1] < GRID_SIZE):
-
-                    if (grid[first_point[1], first_point[0]] == 0 and
-                        grid[second_point[1], second_point[0]] == 0):
-                        found_valid = True
-                        break
-            if found_valid:
-                break
-
-        if not found_valid:
-            is_complete = True
-            ax.set_title(f'Detour Path Complete (Length: {len(path)})')
 
     return line,
 
+
+def is_complete_frame_generator():
+    frame = 0
+    while not is_complete:
+        yield frame
+        frame += 1
+    # Add a few more frames to show the final state
+    for _ in range(10):
+        yield frame
+        frame += 1
+
+
 def run_detour_animation() -> None:
     """Run the detour path animation."""
+    global is_complete
     reset_detour_walk()
     fig, ax, line = setup_render(GRID_SIZE)
 
-    # Create animation
+    # Create animation with frame generator
     anim = animation.FuncAnimation(
         fig,
         lambda frame: render_detour_frame(frame, ax, line),
-        interval=10,  # Slower animation for detours
+        frames=is_complete_frame_generator(),
+        interval=1,  # Slower animation for detours
         blit=False,
         cache_frame_data=False,
-        frames=100
+        repeat=False  # Don't repeat the animation
     )
-    print("saving animation")
-    anim.save('detour_animation.gif', writer='pillow', fps=10)
-    print("done")
-    plt.show()
+    # plt.show()
+    print("Saving animation...")
+    anim.save('detour_animation.gif', writer='pillow', fps=30)
+    print("Animation saved as detour_animation.gif")
+    plt.close()  # Close the figure to prevent display
 
 def find_longest_path(num_attempts: int = 100) -> tuple[list[tuple[int, int]], int]:
     """Find the longest possible path by running multiple attempts.
@@ -388,9 +375,6 @@ def plot_longest_path(path: list[tuple[int, int]]) -> None:
     # Reuse setup_render function for consistent styling
     fig, ax, line = setup_render(GRID_SIZE)
 
-    # Update title for static plot
-    ax.set_title(f'Longest Random Walk (Length: {len(path)} steps)')
-
     # Plot the path
     x_coords, y_coords = zip(*path)
     line.set_data(x_coords, y_coords)
@@ -408,8 +392,8 @@ if __name__ == "__main__":
     # run_animation()
 
     # Option 2: Find the longest path and plot it
-    # longest_path, path_length = find_longest_path(5000)
-    # plot_longest_path(longest_path)
+    longest_path, path_length = find_longest_path(5000)
+    plot_longest_path(longest_path)
 
     # Option 3: Run the detour algorithm animation
     run_detour_animation()
