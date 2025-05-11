@@ -273,7 +273,7 @@ def run_animation() -> None:
     plt.show()
 
     # Optional: Save the animation
-    # anim.save('random_walk_animation.gif', writer='pillow', fps=10)
+    anim.save('random_walk_animation.gif', writer='pillow', fps=10)
 
 def render_detour_frame(frame: int, ax: plt.Axes, line: plt.Line2D) -> tuple[plt.Line2D]:
     """Render one frame of the detour algorithm animation."""
@@ -337,9 +337,12 @@ def run_detour_animation() -> None:
         lambda frame: render_detour_frame(frame, ax, line),
         interval=10,  # Slower animation for detours
         blit=False,
-        cache_frame_data=False
+        cache_frame_data=False,
+        frames=100
     )
-
+    print("saving animation")
+    anim.save('detour_animation.gif', writer='pillow', fps=10)
+    print("done")
     plt.show()
 
 def find_longest_path(num_attempts: int = 100) -> tuple[list[tuple[int, int]], int]:
