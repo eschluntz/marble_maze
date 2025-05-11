@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import random
 import time
+import pickle
+import os
 
 # Random walk parameters
 GRID_SIZE = 16
@@ -474,6 +476,39 @@ def create_composite_animation() -> None:
     print("Animation saved as composite_random_walk.gif")
     plt.close()
 
+def save_points(method='weighted'):
+    """Save points generated using the specified method.
+
+    Args:
+        method: Either 'weighted' for weighted random walk or 'detour' for detour algorithm
+    """
+    if method == 'weighted':
+        longest_path, path_length = find_longest_path(5000)
+        pickle_file = 'longest_path_weighted.pickle'
+    elif method == 'detour':
+        global is_complete, path
+        reset_detour_walk()
+        # Generate complete detour path
+        while not is_complete:
+            make_detour_step()
+        longest_path = path.copy()
+        path_length = len(longest_path)
+        pickle_file = 'longest_path_detour.pickle'
+    else:
+        raise ValueError("Method must be either 'weighted' or 'detour'")
+
+    # Save the path
+    with open(pickle_file, 'wb') as f:
+        pickle.dump(longest_path, f)
+    print(f"Path (method={method}) of length {path_length} saved to {pickle_file}")
+
+
 if __name__ == "__main__":
     # Create composite animation
-    create_composite_animation()
+    # create_composite_animation()
+
+    # Save points using weighted random walk method
+    # save_points('weighted')
+
+    # Or save points using detour method
+    save_points('detour')
