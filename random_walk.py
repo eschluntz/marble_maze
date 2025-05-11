@@ -249,32 +249,21 @@ def find_longest_path(num_attempts: int = 100) -> tuple[list[tuple[int, int]], i
 
 def plot_longest_path(path: list[tuple[int, int]]) -> None:
     """Plot the longest path found."""
-    fig, ax = plt.subplots(figsize=(10, 10))
-    ax.set_xlim(-1, GRID_SIZE)
-    ax.set_ylim(-1, GRID_SIZE)
-    ax.invert_yaxis()  # To match array coordinates
-    ax.set_aspect('equal', adjustable='box')
+    # Reuse setup_render function for consistent styling
+    fig, ax, line = setup_render(GRID_SIZE)
 
-    # Add custom gridlines offset by 0.5
-    for i in range(GRID_SIZE + 1):
-        ax.axvline(x=i - 0.5, color='lightgray', linewidth=0.5)
-        ax.axhline(y=i - 0.5, color='lightgray', linewidth=0.5)
-
-    # Remove tick marks
-    ax.set_xticks([])
-    ax.set_yticks([])
+    # Update title for static plot
+    ax.set_title(f'Longest Random Walk (Length: {len(path)} steps)')
 
     # Plot the path
     x_coords, y_coords = zip(*path)
-    ax.plot(x_coords, y_coords, 'b-', alpha=0.7, linewidth=2)
+    line.set_data(x_coords, y_coords)
 
     # Mark start and end points
     ax.plot(x_coords[0], y_coords[0], 'go', markersize=10)  # Start (green)
     ax.plot(x_coords[-1], y_coords[-1], 'ro', markersize=10)  # End (red)
 
-    ax.set_title(f'Longest Random Walk (Length: {len(path)} steps)')
     plt.tight_layout()
-
     plt.show()
 
 if __name__ == "__main__":
