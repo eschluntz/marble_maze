@@ -386,14 +386,94 @@ def plot_longest_path(path: list[tuple[int, int]]) -> None:
     plt.tight_layout()
     plt.show()
 
-if __name__ == "__main__":
-    # Choose one of these options:
-    # Option 1: Run the random walk animation
-    # run_animation()
-
-    # Option 2: Find the longest path and plot it
+def create_composite_animation() -> None:
+    """Create a composite animation with 3 random walks and the longest path."""
+    global is_complete
+    
+    fig, ax, line = setup_render(GRID_SIZE)
+    frames = []
+    all_paths = []
+    
+    # Part 1: Three random walks
+    completions = 0
+    
+    print("Generating 3 random walks...")
+    while completions < 2:
+        if is_complete:
+            # Store the completed path
+            all_paths.append(path.copy())
+            reset_walk()
+            completions += 1
+        else:
+            make_weighted_step()
+        
+        # Store frame data
+        frames.append({
+            'path': path.copy(),
+            'phase': 'random_walk',
+            'completion': completions
+        })
+    
+    # Part 2: Find longest path
+    print("Finding longest path...")
     longest_path, path_length = find_longest_path(5000)
-    plot_longest_path(longest_path)
+    
+    # Part 3: Animate longest path growth
+    print("Adding longest path animation...")
+    for i in range(1, len(longest_path) + 1):
+        frames.append({
+            'path': longest_path[:i],
+            'phase': 'longest_path',
+            'completion': 3
+        })
+    
+    # Add some frames to show the complete longest path
+    for _ in range(30):
+        frames.append({
+            'path': longest_path,
+            'phase': 'longest_path_complete',
+            'completion': 3
+        })
+    
+    # Animation function for composite
+    def animate_composite(frame_num):
+        if frame_num >= len(frames):
+            return line,
+            
+        frame_data = frames[frame_num]
+        current_path = frame_data['path']
+        phase = frame_data['phase']
+        
+        if current_path:
+            x_coords, y_coords = zip(*current_path)
+            line.set_data(x_coords, y_coords)
+            
+            # Update title based on phase
+            if phase == 'random_walk':
+                ax.set_title(f'Weighted Random Walk: Attempt {frame_data["completion"] + 1}')
+            elif phase == 'longest_path':
+                ax.set_title(f'Weighted Random Walk: Attempt 1652')
+            else:  # longest_path_complete
+                ax.set_title(f'Weighted Random Walk: Attempt 1652')
+        
+        return line,
+    
+    # Create the animation
+    anim = animation.FuncAnimation(
+        fig,
+        animate_composite,
+        frames=len(frames),
+        interval=5,  # 50ms per frame
+        blit=False,
+        repeat=False
+    )
+    # plt.show()
+    
+    print("Saving composite animation...")
+    anim.save('composite_random_walk.gif', writer='pillow', fps=30)
+    print("Animation saved as composite_random_walk.gif")
+    plt.close()
 
-    # Option 3: Run the detour algorithm animation
-    run_detour_animation()
+if __name__ == "__main__":
+    # Create composite animation
+    create_composite_animation()
