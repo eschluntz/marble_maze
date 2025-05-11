@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import random
+import time
 
 # Random walk parameters
 GRID_SIZE = 16
@@ -17,6 +18,17 @@ is_complete = False
 
 # Initialize the grid
 grid[0, 0] = 1  # Mark starting position as visited
+
+def reset_walk() -> None:
+    """Reset the random walk to start a new one."""
+    global grid, path, current_x, current_y, is_complete
+
+    grid = np.zeros((GRID_SIZE, GRID_SIZE))
+    path = [(0, 0)]
+    current_x = 0
+    current_y = 0
+    is_complete = False
+    grid[0, 0] = 1  # Mark starting position as visited
 
 def find_valid_moves(x: int, y: int, grid: np.ndarray) -> list[tuple[int, int]]:
     """Find all valid moves from current position."""
@@ -35,9 +47,6 @@ def find_valid_moves(x: int, y: int, grid: np.ndarray) -> list[tuple[int, int]]:
 def make_random_step() -> None:
     """Make one step in the random walk."""
     global current_x, current_y, is_complete
-
-    if is_complete:
-        return
 
     valid_moves = find_valid_moves(current_x, current_y, grid)
 
@@ -67,6 +76,10 @@ def setup_render(grid_dimensions: int) -> tuple[plt.Figure, plt.Axes, plt.Line2D
         ax.axvline(x=i - 0.5, color='lightgray', linewidth=0.5)
         ax.axhline(y=i - 0.5, color='lightgray', linewidth=0.5)
 
+    # Remove tick marks
+    ax.set_xticks([])
+    ax.set_yticks([])
+
     ax.set_title('Random Walk Animation')
 
     # Initialize line
@@ -74,14 +87,22 @@ def setup_render(grid_dimensions: int) -> tuple[plt.Figure, plt.Axes, plt.Line2D
 
     return fig, ax, line
 
-def render_frame(frame: int, ax: plt.Axes, line: plt.Line2D, current_path: list[tuple[int, int]], walk_complete: bool) -> tuple[plt.Line2D]:
+def render_frame(frame: int, ax: plt.Axes, line: plt.Line2D) -> tuple[plt.Line2D]:
     """Render one frame of the animation."""
-    # Make one step in the random walk
-    make_random_step()
+    global is_complete
+
+    # If the walk is complete, wait a bit then reset
+    if is_complete:
+        # Show the complete path for a short time
+        if frame % 20 == 19:  # After 20 frames, reset
+            reset_walk()
+    else:
+        # Make one step in the random walk
+        make_random_step()
 
     # Update the visualization
-    if current_path:
-        x_coords, y_coords = zip(*current_path)
+    if path:
+        x_coords, y_coords = zip(*path)
         line.set_data(x_coords, y_coords)
 
     return line,
@@ -93,10 +114,9 @@ def run_animation() -> None:
     # Create animation
     anim = animation.FuncAnimation(
         fig,
-        lambda frame: render_frame(frame, ax, line, path, is_complete),
-        interval=0,
+        lambda frame: render_frame(frame, ax, line),
+        interval=1,  # Slow down the animation
         blit=False,
-        repeat=False,
         cache_frame_data=False
     )
 
