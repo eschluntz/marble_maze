@@ -62,6 +62,94 @@ def make_random_step() -> None:
         is_complete = True
         print(f"Path length: {len(path)}")
 
+def make_curvy_step() -> None:
+    """Make one step, preferring turns over straight lines."""
+    global current_x, current_y, is_complete
+
+    valid_moves = find_valid_moves(current_x, current_y, grid)
+
+    if valid_moves:
+        # Get the last direction if we have more than one point in path
+        prefer_turns = False
+        if len(path) > 1:
+            last_dx = path[-1][0] - path[-2][0]
+            last_dy = path[-1][1] - path[-2][1]
+
+            # Filter out moves that go straight (same direction as last move)
+            turning_moves = []
+            straight_move = None
+
+            for dx, dy in valid_moves:
+                if dx == last_dx and dy == last_dy:
+                    straight_move = (dx, dy)
+                else:
+                    turning_moves.append((dx, dy))
+
+            # Prefer turning moves if available
+            if turning_moves:
+                dx, dy = random.choice(turning_moves)
+            elif straight_move:
+                dx, dy = straight_move
+            else:
+                # Shouldn't happen, but fallback to random
+                dx, dy = random.choice(valid_moves)
+        else:
+            # First move, choose randomly
+            dx, dy = random.choice(valid_moves)
+
+        # Make the move
+        current_x += dx
+        current_y += dy
+        grid[current_y, current_x] = 1
+        path.append((current_x, current_y))
+    else:
+        # No valid moves - walk is complete
+        is_complete = True
+        print(f"Path length: {len(path)}")
+
+def make_weighted_step() -> None:
+    """Make one step with weighted random choice to prefer moves toward (0,0)."""
+    global current_x, current_y, is_complete
+
+    valid_moves = find_valid_moves(current_x, current_y, grid)
+
+    if valid_moves:
+        # Calculate weights based on distance to origin (0,0)
+        weights = []
+        for dx, dy in valid_moves:
+            new_x = current_x + dx
+            new_y = current_y + dy
+            # Calculate current distance and new distance to origin
+            current_dist = (current_x ** 2 + current_y ** 2) ** 0.5
+            new_dist = (new_x ** 2 + new_y ** 2) ** 0.5
+
+            # Weight: higher weight for moves that reduce distance
+            # Add 1 to avoid zero weights and ensure all moves have some chance
+            if new_dist < current_dist:
+                # Moving closer to origin - higher weight
+                weight = 20.0
+            elif new_dist > current_dist:
+                # Moving away from origin - lower weight
+                weight = 0.5
+            else:
+                # Same distance - neutral weight
+                weight = 1.0
+
+            weights.append(weight)
+
+        # Choose move using weighted random selection
+        dx, dy = random.choices(valid_moves, weights=weights, k=1)[0]
+
+        # Make the move
+        current_x += dx
+        current_y += dy
+        grid[current_y, current_x] = 1
+        path.append((current_x, current_y))
+    else:
+        # No valid moves - walk is complete
+        is_complete = True
+        print(f"Path length: {len(path)}")
+
 # Rendering functions
 def setup_render(grid_dimensions: int) -> tuple[plt.Figure, plt.Axes, plt.Line2D]:
     """Set up the matplotlib figure and axis for rendering."""
@@ -97,8 +185,8 @@ def render_frame(frame: int, ax: plt.Axes, line: plt.Line2D) -> tuple[plt.Line2D
         if frame % 20 == 19:  # After 20 frames, reset
             reset_walk()
     else:
-        # Make one step in the random walk
-        make_random_step()
+        # Make one step in the random walk (using weighted preference)
+        make_weighted_step()
 
     # Update the visualization
     if path:
